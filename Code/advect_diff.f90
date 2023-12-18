@@ -3,11 +3,12 @@
 program AdvectionDiffusion
   use utility, only : fp, pi
   use setup_module, only : initialize, filename, x_a, x_b, C, k, dx, dt, error, tolerance, Nx, prob_type, a
-  use fd_module, only : dt_advection, dt_diffusion
+  use fd_module, only : dt_advection, dt_diffusion, first_upwind, second_center, lax_wendroff !advection_gc, 
   use error_module, only: error_comp
   use output_module, only: write_data, write_data_advection_x, write_data_advection_sol
   implicit none
 
+  
   !define variables
   integer :: i , timestep, pass
   real(fp), allocatable :: x(:), u(:), u_prev(:)
@@ -58,9 +59,9 @@ program AdvectionDiffusion
     x(i) = x_a + (i - (1.0/2.0))*dx
   end do 
 
+  
   ! write x positions in top of each data file ------------
   filename = "discrete_upwind_N=" // Nx_string // "_C=" // C_string // ".dat"
-  !filename = "discrete_upwind.dat"
   call write_data_advection_x(filename, x)
   filename = "discrete_secondcenter_N=" // Nx_string // "_C=" // C_string // ".dat"
   call write_data_advection_x(filename, x)
@@ -73,6 +74,8 @@ program AdvectionDiffusion
   filename = "cont_laxwendroff_N=" // Nx_string // "_C=" // C_string // ".dat"
   call write_data_advection_x(filename, x)
 
+
+  
   ! initialize discrete data --------------
   time_passed = 0.0
   call advection_initialize_discrete()
@@ -258,44 +261,7 @@ program AdvectionDiffusion
     end do
   end subroutine advection_initialize_discrete
 
-  !redefining ghost cells 
-  subroutine advection_gc()
-    implicit none 
-      u(0) = u(Nx)
-      u(Nx+1) = u(1)
-  end subroutine advection_gc 
 
-  ! first upwind routine
-  subroutine first_upwind() !eqn 30
-    implicit none
-    call advection_gc() 
-    u_prev(0:Nx+1) = u(0:Nx+1)
-    !do i = 1, Nx
-    do i = 0, Nx+1
-      u(i) = u_prev(i) - (a*dt/dx)*(u_prev(i) - u_prev(i-1))
-    enddo   
-  end subroutine first_upwind
-
-  ! second center routine
-  subroutine second_center() !eqn 32
-    implicit none
-    call advection_gc()
-    u_prev(0:Nx+1) = u(0:Nx+1)
-    do i = 0, Nx+1
-      u(i) = u_prev(i) - ((a*dt)/(2.0*dx))*(u_prev(i+1)-u_prev(i-1))
-    enddo  
-  end subroutine second_center
-    
-  ! lax wendroff routine 
-  subroutine lax_wendroff() !eqn 35
-    implicit none
-    call advection_gc()
-    u_prev(0:Nx+1) = u(0:Nx+1)
-    do i = 0, Nx+1
-      u(i) = u_prev(i) - (((a*dt)/(2.0*dx))*(u_prev(i+1) - u_prev(i-1))) & 
-      & + (1.0/2.0)*(((a*dt)/dx)**2)*(u_prev(i+1) - 2.0*u_prev(i) + u_prev(i-1))
-    enddo
-  end subroutine lax_wendroff
 
 end program 
 
